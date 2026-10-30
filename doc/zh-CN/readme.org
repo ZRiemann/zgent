@@ -1,0 +1,37 @@
+#+STARTUP: indent
+#+TITLE: zgent 中文文档
+
+* 项目概述
+
+[[file:../../readme.org][项目主页]] | [[file:../en/readme.org][English Version]]
+
+zgent 是由用户主导代码框架开发和思想验证的 ZetaX 项目。用户主导核心框架、
+关键逻辑和设计方向，并保持对整体实现的完整理解。Agent 围绕这一方向配合完善
+辅助代码、文档、构建集成和必要验证。
+
+zeta_agent 主要由 Agent 开发维护，用户审查需要投入较多时间与精力。zgent 采用
+不同的协作方式，让框架保持在用户能够理解和掌控的范围内。参考 zeta_agent
+不代表采纳其架构、功能或里程碑。
+
+* 当前实现
+
+- C++ 应用服务器骨架，包含 =zgent= 和内部 =zgent_core= 构建目标。
+- 继承 =z::server=，使用项目自身的 main 入口。
+- 启动、停止日志，以及 JSON 控制台和滚动文件日志配置。
+- 薄入口 =zbuild.py= 和基于 Forge 的项目构建定义。
+- 尚未实现 Agent 业务运行时、测试用例或注册的 CTest 测试。
+
+按已查看的 zpp 源码，继承的循环会立即结束；尚未通过运行已安装包或现有
+可执行程序确认。完整依据与限制见 [[file:../../BUILD.org::*Lifecycle and logging][生命周期与日志说明]]。
+版本记录在 [[file:../../VERSION][VERSION]]；版本号或已有产物不代表功能完整或通过当前验证。
+
+* 文档导航
+
+- [[file:release_history.org][发布历史]] | [[file:../../release_history.org][English Version]]：版本变更与验证限制。
+- [[file:../../BUILD.org][构建与运行参考]]：依赖准备、配置、命令、路径和限制。
+- [[file:development.org][开发指南]]：协作方式、源码阅读、职责归属和验证规则。
+- [[file:../../AGENTS.md][Agent 指导]]：ZetaX 约定及本项目的工作约束。
+- [[file:../server.json][开发配置]]。
+
+英文是主文档，行为或项目指导变化时同步维护简体中文页面。两种语言统一引用
+根目录 =BUILD.org= 作为构建说明。许可证见 [[file:../../LICENSE][LICENSE]]。

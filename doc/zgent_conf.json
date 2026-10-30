@@ -1,0 +1,26 @@
+{
+    "zgent":{
+        "spd":{
+            "async":true,
+            "console":true,
+            "rotate_on_open": true,
+            "name":"${ZETAX_ROOT}/logs/zgent/zgent.log",
+            "max_size":32,
+            "rotats":3,
+            "queue_size": 8192,
+            "flush_interval_sec": 2,
+            "pattern":"%d %H:%M:%S.%f %t %^%L%$: %v\t%g:%#"
+        },
+        "nng_runtime":{
+            "task_threads": 1,
+            "task_threads_max": 2,
+            "expire_threads": 1,
+            "expire_threads_max": 2,
+            "poller_threads": 2,
+            "poller_threads_max": 2,
+            "resolver_threads": 1,
+            "aios": 1024
+        },
+        "deepinfra_id": "dpinf_key"
+    }
+}

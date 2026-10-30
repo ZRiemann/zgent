@@ -1,0 +1,43 @@
+#+STARTUP: indent
+#+TITLE: zgent English Documentation
+
+* Overview
+
+[[file:../../readme.org][Project home]] | [[file:../zh-CN/readme.org][中文版]]
+
+zgent is a user-led ZetaX project for developing a code framework and
+validating ideas. The user leads the core framework, key logic, and design
+direction, and maintains a complete understanding of the implementation.
+Agents assist with auxiliary code, documentation, build integration, and
+focused verification within that direction.
+
+zeta_agent is primarily developed and maintained by agents, requiring
+significant user effort to review. zgent uses a different collaboration
+model to keep the framework understandable and under the user's control.
+Referencing zeta_agent does not adopt its architecture, features, or milestones.
+
+* Current implementation
+
+- A C++ application server scaffold with =zgent= and internal =zgent_core= targets.
+- A =z::server= subclass driven by the project-owned main entry.
+- Startup/shutdown messages and JSON console/rotating-file logging configuration.
+- A thin =zbuild.py= and project-owned build definition using Forge.
+- No implemented agent-specific runtime behavior, test cases, or registered CTest tests.
+
+The inspected zpp source implies that the inherited loop exits immediately;
+this has not been checked by running the installed package or existing
+executable. See [[file:../../BUILD.org::*Lifecycle and logging][Lifecycle and logging]] for the exact qualification.
+The version is recorded in [[file:../../VERSION][VERSION]]; a version number or existing
+artifact is not a statement of feature completeness or current verification.
+
+* Documentation
+
+- [[file:../../release_history.org][Release history]] | [[file:../zh-CN/release_history.org][中文发布历史]]: version changes and verification limits.
+- [[file:../../BUILD.org][Build and runtime reference]]: dependency setup, profiles, commands, paths, and limits.
+- [[file:development.org][Development guide]]: collaboration, source reading, ownership, and verification.
+- [[file:../../AGENTS.md][Agent guidance]]: ZetaX rules and project-specific working constraints.
+- [[file:../server.json][Development configuration]].
+
+English is the primary documentation language; keep the Simplified Chinese
+pages synchronized when behavior or project guidance changes. Both languages
+use the root =BUILD.org= as the shared build reference. See [[file:../../LICENSE][LICENSE]].

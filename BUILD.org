@@ -1,0 +1,164 @@
+#+STARTUP: indent
+#+TITLE: zgent Build and Runtime Reference
+
+* Build and runtime reference
+
+[[file:readme.org][Project home]] | [[file:doc/en/readme.org][English documentation]] | [[file:doc/zh-CN/readme.org][中文文档]]
+
+This is the shared command reference for both documentation languages.
+Commands below describe available operations; they are not a record of
+builds, installation, tests, or runtime checks performed during documentation work.
+
+* Prerequisites
+
+Use the standard ZetaX workspace with sibling =zgent=, =zeta_forge=, =zpp=,
+and =zsa= checkouts. =ZETAX_ROOT= identifies that workspace. If the shared
+environment is not loaded, source ="$ZETAX_ROOT/zsa/env.sh"= in your shell.
+The toolchain needs Python 3, CMake, Ninja, and a C++ compiler. The project
+builder obtains the C++ standard from the shared repository configuration.
+
+For Python language servers such as Zed's BasedPyright, =pyrightconfig.json=
+adds the sibling =zeta_forge/common= directory to the analysis path. If
+=ZETAX_ROOT= points to a different workspace, configure the language server's
+extra paths for that workspace as well. This setting only affects editor
+analysis; =zbuild.py= locates Forge at runtime using =ZETAX_ROOT=.
+
+Prepare the shared dependency packages and install the zpp core package
+for the intended profile before configuring zgent:
+
+#+begin_src sh
+cd "$ZETAX_ROOT/zeta_forge"
+./zbuild.py install deps --profile release
+
+cd "$ZETAX_ROOT/zpp"
+./zbuild.py install zpp --profile release
+
+cd "$ZETAX_ROOT/zgent"
+./zbuild.py doctor --profile release
+#+end_src
+
+For Debug, replace =release= with =debug= in each command. These setup
+operations build/install dependencies; they are separate from a documentation
+check. Reinstall zpp and rebuild affected consumers after relevant zpp changes.
+
+zgent uses =find_package(zpp CONFIG REQUIRED)= and links =zpp::zpp=. It
+consumes Forge's installed dependency package configuration rather than
+maintaining a separate Conan graph. The installation prefix comes from
+=ZETA_INSTALL_PREFIX=, defaulting to =~/.local=.
+
+* Unified entry and command semantics
+
+Run commands from the zgent checkout:
+
+#+begin_src sh
+./zbuild.py --help
+./zbuild.py list
+./zbuild.py metadata --profile release
+./zbuild.py doctor --profile release
+./zbuild.py build --profile release
+./zbuild.py build --profile debug
+./zbuild.py rebuild --profile release
+./zbuild.py check --profile release
+./zbuild.py test --profile debug
+./zbuild.py run --profile release
+./zbuild.py dev --profile debug
+./zbuild.py clean --profile debug
+#+end_src
+
+- The public deliverable and default build/run target are =zgent=. The profile
+  defaults to =release=. =zgent_core= is an internal static library.
+- =list= reports supported actions; generic CLI help may also list actions
+  unavailable to this deliverable. zgent currently exposes no install or fetch action.
+- =metadata= describes outputs and scope. =doctor= performs read-only
+  prerequisite checks; success does not prove compilation or runtime behavior.
+- =build= performs an incremental build. =rebuild= removes the selected
+  profile's build tree and then builds it again.
+- =check= configures and compiles the selected native target. It does not
+  rewrite source or run tests, but it is not a documentation-only check.
+- =test= enables the test configuration, builds, and invokes CTest with
+  =--no-tests=error=. No tests are implemented or registered in the current
+  scaffold, so this is not an available passing correctness suite.
+- =run= launches an existing executable without building. =dev= builds once
+  and launches it in the foreground; it is not a watcher.
+- =clean= removes only =build/Release= or =build/Debug= for the selected
+  profile, including its sibling native outputs. It preserves the other
+  profile, installations, logs, source, and shared caches.
+
+Append =--dry-run= to inspect scope without executing the operation, for example
+=./zbuild.py test --profile debug --dry-run=. A successful dry-run does not
+establish that the operation itself will succeed.
+
+* Outputs and runtime invocation
+
+| Profile | Build tree | Executable | Internal library |
+|---------+------------+------------+------------------|
+| Release | =build/Release= | =build/Release/src/zgent/zgent= | =build/Release/src/zgent/libzgent_core.a= |
+| Debug | =build/Debug= | =build/Debug/src/zgent/zgent= | =build/Debug/src/zgent/libzgent_core.a= |
+
+The launcher runs from =build/<BuildType>/src/zgent/=, using the executable
+in that directory and these arguments:
+
+#+begin_src text
+<absolute executable path> <absolute checkout path>/doc/server.json zgent
+#+end_src
+
+The first program argument selects the JSON file and the second selects its
+=zgent= configuration item. Arguments supplied after =--= are appended to
+these defaults, not substituted for them. The current application defines
+no additional argument parser.
+
+* Lifecycle and logging
+
+The project entry in =src/zgent/main.cpp= constructs the application and calls
+=configure -> run -> loop -> stop -> wait_stop= on the successful path.
+The application currently overrides only =run= and =stop= to log messages.
+
+In the inspected zpp source, the default =timer()= returns =ERR_END= and
+=loop()= exits on that result. zgent does not override =timer()=, so that
+source implies an immediate loop exit rather than a persistent service.
+This is a source-based finding, not a runtime test of the installed zpp
+package or the existing zgent executable. The launcher supports Ctrl-C
+for a process that is still running; this does not establish a persistent
+loop in the current scaffold.
+
+[[file:doc/server.json][Development configuration]] enables asynchronous console and rotating-file
+logging. The file is =${ZETAX_ROOT}/logs/zgent/zgent.log=; =run= and =dev=
+create its parent directory before launch. Current settings include a 32 MiB
+file-size limit, =rotats= set to 3, a queue size of 8192, and a two-second
+flush interval. Direct executable invocation must prepare the log directory
+and the environment itself. Keep credentials and private data out of
+committed configuration and log messages.
+
+* Vault operations
+
+Install =zeta_vault= and run the dedicated server in a terminal. It prompts
+for the master password through the controlling terminal:
+
+#+begin_src sh
+scripts/zgent_vault_server.sh
+#+end_src
+
+The encrypted vault is =~/.local/share/zeta/zgent/vault.bin= and its socket
+is =${XDG_RUNTIME_DIR:-/tmp/zeta-vault-UID}/zeta/zgent.sock=. From another
+terminal under the same user, manage secrets with:
+
+#+begin_src sh
+scripts/zgent_vault_ctl.sh list
+scripts/zgent_vault_ctl.sh put-utf8 <secret_id>
+#+end_src
+
+=put-utf8= reads the value with terminal echo disabled. Select secret IDs for
+the actual consumers; zgent does not yet read secrets from the vault. The
+server and clients must use the same runtime directory. Once unlocked, vault
+access is available to processes running under the same UID; it does not
+isolate mutually untrusted processes under that user.
+
+* Direct CMake configuration
+
+The supported project entry is =./zbuild.py=. For manual CMake use, provide
+=CMAKE_BUILD_TYPE=, =ZETA_CMAKE_UTIL_DIR= pointing at Forge's =cmake_util/=,
+=ZETA_DEPS_CMAKE_DIR= pointing at
+=<install-prefix>/lib/cmake/zeta_deps/<BuildType>=, and =CMAKE_PREFIX_PATH=
+containing the installed zpp prefix and dependency configuration directory.
+Use the same C++ standard as the shared repository configuration. Manual
+configuration does not prepare dependencies or install zpp.

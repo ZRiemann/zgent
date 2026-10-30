@@ -1,0 +1,41 @@
+#+STARTUP: indent
+#+TITLE: zgent Release History
+
+[[file:readme.org][Project home]] | [[file:doc/zh-CN/release_history.org][中文版]]
+
+Finalized version headings use =vX.Y.Z - YYYY-MM-DDTHH:mm:ssZ=, with the UTC
+committer time of the commit that introduces the version in root =VERSION=.
+Each version has a stable =CUSTOM_ID=. A timestamp does not establish
+acceptance or deployment.
+
+The =v0.2.0= entry records the initial committed application scaffold.
+This record does not declare runtime acceptance or deployment.
+
+* Release History
+
+** v0.2.0 - 2026-10-30T02:16:26Z
+:PROPERTIES:
+:CUSTOM_ID: v0.2.0
+:END:
+
+*** Changes
+- Establish the minimal zpp-based application server scaffold, with project-owned
+  lifecycle entry, startup/shutdown messages, and JSON logging configuration.
+- Integrate the project with Forge's shared CLI and installed dependency
+  environment, with separate Release and Debug build trees.
+- Document the user-led framework and idea-validation workflow, agent support
+  responsibilities, and ZetaX repository ownership in synchronized English
+  and Chinese documentation and project agent guidance.
+- Centralize command semantics, runtime paths, and verification limits in
+  [[file:BUILD.org][BUILD.org]], and add bilingual release histories and navigation.
+
+*** Validation
+- Check local documentation links, Org structure, bilingual version/anchor
+  alignment, and whitespace, including newly untracked documents.
+- Earlier documentation checks covered CLI help, =list=, Release/Debug
+  =metadata=, and dry-run plans for =check=, =test=, =dev=, and =clean=.
+  These checks did not compile code, run tests, or launch the application.
+- No actual test cases are implemented. Builds, installation, runtime
+  acceptance, and deployment were not performed during this documentation work.
+- The inherited loop's immediate exit is a source-based observation; the
+  installed zpp package and existing executable have not been runtime-verified.

@@ -1,0 +1,32 @@
+#+STARTUP: indent
+#+TITLE: zgent 发布历史
+
+[[file:../../readme.org][项目主页]] | [[file:../../release_history.org][English Version]]
+
+定稿后的版本标题使用 =vX.Y.Z - YYYY-MM-DDTHH:mm:ssZ=，时间取根目录 =VERSION=
+引入该版本的提交之 UTC committer time。每个版本使用稳定的 =CUSTOM_ID=。
+时间戳本身不代表通过验收或完成部署。
+
+=v0.2.0= 条目记录首次提交的应用骨架。本记录不表示已完成运行验收或部署。
+
+* 发布历史
+
+** v0.2.0 - 2026-10-30T02:16:26Z
+:PROPERTIES:
+:CUSTOM_ID: v0.2.0
+:END:
+
+*** 变更
+- 建立基于 zpp 的最小应用服务器骨架，包含项目自身的生命周期入口、启动与停止日志、
+  JSON 日志配置。
+- 接入 Forge 共享 CLI 和已安装的依赖环境，分别使用 Release 与 Debug 构建目录。
+- 在同步维护的中英文文档及项目 Agent 指导中，明确用户主导框架与思想验证、
+  Agent 辅助完善的协作方式，以及 ZetaX 仓库职责。
+- 在 [[file:../../BUILD.org][BUILD.org]] 集中说明命令语义、运行路径与验证限制，补齐双语发布历史及入口。
+
+*** 验证说明
+- 检查本地文档链接、Org 结构、双语版本与锚点一致性及空白问题，包含新增未跟踪文档。
+- 此前文档检查覆盖 CLI 帮助、=list=、Release/Debug 的 =metadata=，以及
+  =check=、=test=、=dev=、=clean= 的 dry-run；这些检查未编译代码、运行测试或启动应用。
+- 尚未实现实际测试用例。本次文档工作未执行构建、安装、运行验收或部署。
+- 继承循环会立即结束是源码观察；尚未运行验证已安装的 zpp 包和现有可执行程序。

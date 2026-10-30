@@ -1,0 +1,13 @@
+# Build trees and local caches
+build
+build_debug
+
+# Compiler and linker outputs
+*.o
+*.a
+*.so
+*.d
+
+# Python
+**/__pycache__
+**/*.pyc

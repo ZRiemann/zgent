@@ -1,0 +1,75 @@
+#+STARTUP: indent
+#+TITLE: zgent Development Guide
+
+* Development guide
+
+[[file:readme.org][Documentation]] | [[file:../zh-CN/development.org][中文版]]
+
+** Collaboration
+
+The user leads the core code framework, key logic, design decisions, and
+idea validation. Keeping the complete framework understandable to the user
+is a project goal, not merely a review step after agent implementation.
+
+Agents normally complete auxiliary code, documentation, build integration,
+and focused checks around the user's existing code and stated direction.
+Explain the intended change before editing code. When a task affects the
+core framework or a key design, describe its basis and impact and follow
+the user's explicit direction rather than independently expanding the design.
+An explicitly delegated task should proceed within its authorized scope;
+the supporting role does not require confirmation for every routine step.
+
+Prefer small, understandable changes. Do not grow abstractions or copy
+zeta_agent subsystems solely to achieve apparent completeness. Its designs
+are reference material until the user chooses an applicable direction.
+
+** Source reading path
+
+1. Read [[file:../../readme.org][Project home]] and [[file:../../AGENTS.md][Agent guidance]] for intent and constraints.
+2. Read [[file:../../src/zgent/main.cpp][main.cpp]]: constructs =z::app::server= and drives its lifecycle.
+3. Read [[file:../../src/zgent/app.h][app.h]] and [[file:../../src/zgent/app.cpp][app.cpp]]: application-owned class and behavior.
+4. Inspect =include/zpp/core/server.h= and =src/zpp/core/server.cpp= in the
+   zpp checkout for the server lifecycle.
+   zgent consumes an installed zpp package; source observations do not prove
+   that an existing binary uses the same version.
+5. Read [[file:../server.json][server.json]], [[file:../../src/zgent/CMakeLists.txt][native targets]], and
+   [[file:../../builder/zgent.py][project builder]] alongside [[file:../../BUILD.org][BUILD.org]] for configuration and build behavior.
+
+** ZetaX ownership and reuse
+
+zgent follows all ZetaX conventions and constraints:
+
+- =zeta_forge= owns shared build tooling, third-party dependency management,
+  and installed dependency configuration. Check Forge before adding dependencies;
+  do not introduce an application-local Conan graph or vendor third-party source.
+- =zpp= owns reusable C++ infrastructure and wrappers, including logging,
+  configuration, and lifecycle helpers. Check its existing capabilities before
+  implementing a duplicate; reusable additions belong at that boundary.
+- =zsa= owns deployment, operations, host configuration, secrets provisioning,
+  and shared automation. Keep those responsibilities outside this application.
+- =zgent= owns its application framework, behavior, development configuration,
+  documentation, and thin project-specific build integration.
+
+Explain proposed cross-repository placement before crossing the authorized
+scope. Preserve unrelated changes, staged scope, runtime configuration, and
+explicit proxy settings. Do not modify third-party or generated files without
+an explicit request.
+
+** Documentation and verification
+
+Use Org files, =#+begin_src= / =#+end_src= blocks, inline =code=, and relative
+=file:= links. English is primary; update the matching Chinese pages together.
+Keep command details in the shared [[file:../../BUILD.org][BUILD.org]]. Document implemented behavior
+separately from proposals and distinguish source inspection from runtime evidence.
+
+Start with checks appropriate to the change. For documentation, inspect all
+changed and newly untracked pages for links, headings, paired blocks, whitespace,
+and bilingual consistency. Use CLI help, =list=, =metadata=, and dry-run plans
+to check command descriptions without building or launching programs.
+
+=check= includes compilation. =test= prepares/builds and runs CTest, but the
+current scaffold has no actual test suite. Do not report either a dry-run or
+an empty test inventory as passing correctness tests. Do not run full builds
+unless explicitly requested; do not run installation, deployment, or services
+as incidental documentation checks. Report performed checks and unrun checks.
+No automatic commit is part of documentation maintenance.

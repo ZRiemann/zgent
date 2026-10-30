@@ -1,0 +1,77 @@
+#+STARTUP: indent
+#+TITLE: zgent
+
+* zgent
+
+[[file:doc/en/readme.org][English Documentation]] | [[file:doc/zh-CN/readme.org][中文文档]]
+
+zgent is a user-led ZetaX project for developing a code framework and
+validating ideas. The user owns the core framework, key logic, and design
+direction, with the goal of understanding the implementation in full.
+Agents support this work through auxiliary code, documentation, build
+integration, and focused verification.
+
+** Why a separate project?
+
+zeta_agent is developed and maintained primarily by agents, which places a
+significant review burden on the user. zgent establishes a different way of
+working: the user builds and understands the main framework, while agents
+help complete supporting work around the user's direction.
+
+zeta_agent provides reference material; zgent's architecture, features, and
+delivery direction remain user-led.
+
+** Current state
+
+The implementation is a minimal C++ application server scaffold built on
+=zpp=. It contains a project-owned main entry, a =z::server= subclass, startup and
+shutdown log messages, JSON logging configuration, and a Forge-backed build
+entry. Agent-specific runtime behavior has not been implemented.
+
+There are no test cases or registered CTest tests yet. Existing build
+artifacts alone do not establish current build or runtime acceptance.
+The current version is recorded in [[file:VERSION][VERSION]].
+See [[file:release_history.org][Release history]] and [[file:doc/zh-CN/release_history.org][中文发布历史]] for changes and
+verification limits.
+
+** Quick start
+
+Prepare the matching Forge dependency environment and installed zpp package
+as described in [[file:BUILD.org::*Prerequisites][Build prerequisites]], then run from the zgent checkout:
+
+#+begin_src sh
+./zbuild.py list
+./zbuild.py doctor
+./zbuild.py build --profile release
+./zbuild.py run --profile release
+#+end_src
+
+=run= uses an existing executable; =dev= builds and runs once. The current
+scaffold does not implement a persistent service loop. See
+[[file:BUILD.org][BUILD.org]] for the source-based lifecycle finding, runtime verification
+limits, command semantics, paths, and cleanup scope.
+
+** Repository layout
+
+- =src/zgent/= : application entry and server subclass; =zgent_core= and =zgent= targets.
+- =include/= : currently empty; reserved for interfaces when needed.
+- =tests/= : currently empty; no correctness suite is implemented.
+- =builder/= and =zbuild.py= : project build definition and thin Forge entry.
+- =doc/server.json= : development logging configuration.
+- =doc/en/= and =doc/zh-CN/= : English primary and Simplified Chinese documentation.
+- =BUILD.org= : shared build and runtime reference for both languages.
+- =release_history.org= : English release history, with a Chinese translation under =doc/zh-CN/=.
+- =AGENTS.md= : ZetaX guidance and zgent collaboration rules.
+
+** Project conventions
+
+zgent follows all ZetaX conventions and constraints. Forge owns shared
+build tooling and dependency management; zpp owns reusable C++ infrastructure;
+zsa owns deployment and operations; zgent owns its application logic.
+
+See [[file:doc/en/development.org][Development guide]], [[file:doc/zh-CN/development.org][中文开发指南]], and
+[[file:AGENTS.md][Agent guidance]] for collaboration and change boundaries.
+
+** License
+
+See [[file:LICENSE][LICENSE]].
