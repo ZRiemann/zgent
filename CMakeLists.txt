@@ -57,9 +57,15 @@ endif()
 
 list(PREPEND CMAKE_PREFIX_PATH "${ZETA_DEPS_CMAKE_DIR}")
 find_package(zpp CONFIG REQUIRED)
+find_package(zpp_nng CONFIG REQUIRED)
+find_package(zpp_hpx CONFIG REQUIRED)
 
 if(ZGENT_BUILD_TESTS)
     enable_testing()
 endif()
 
 add_subdirectory(src)
+
+if(ZGENT_BUILD_TESTS)
+    add_subdirectory(tests)
+endif()

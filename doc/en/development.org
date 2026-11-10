@@ -26,13 +26,14 @@ are reference material until the user chooses an applicable direction.
 ** Source reading path
 
 1. Read [[file:../../readme.org][Project home]] and [[file:../../AGENTS.md][Agent guidance]] for intent and constraints.
-2. Read [[file:../../src/zgent/main.cpp][main.cpp]]: constructs =z::app::server= and drives its lifecycle.
+2. Read [[file:../../src/zgent/main.cpp][main.cpp]]: constructs =z::app::server= and calls =configure()= and blocking =run()=.
 3. Read [[file:../../src/zgent/app.h][app.h]] and [[file:../../src/zgent/app.cpp][app.cpp]]: application-owned class and behavior.
 4. Inspect =include/zpp/core/server.h= and =src/zpp/core/server.cpp= in the
    zpp checkout for the server lifecycle.
    zgent consumes an installed zpp package; source observations do not prove
    that an existing binary uses the same version.
-5. Read [[file:../server.json][server.json]], [[file:../../src/zgent/CMakeLists.txt][native targets]], and
+5. Read [[file:../../src/zgent/hpx_runtime.h][hpx_runtime.h]] and its implementation for the application-local HPX boundary.
+6. Read [[file:../zgent_conf.json][zgent_conf.json]], [[file:../zgent_hpx.ini][zgent_hpx.ini]], [[file:../../src/zgent/CMakeLists.txt][native targets]], and
    [[file:../../builder/zgent.py][project builder]] alongside [[file:../../BUILD.org][BUILD.org]] for configuration and build behavior.
 
 ** ZetaX ownership and reuse
@@ -55,6 +56,28 @@ scope. Preserve unrelated changes, staged scope, runtime configuration, and
 explicit proxy settings. Do not modify third-party or generated files without
 an explicit request.
 
+** Runtime ownership
+
+=z::app::server= retains its =z::server= base and owns both runtime members.
+Its NNG owner uses the installed zpp wrapper. The small local =hpx_runtime=
+encapsulates callback-based HPX initialization/finalization because zpp's
+existing server/main adapters do not provide a composable runtime owner.
+This application-specific choice does not add a new zpp public interface.
+
+=configure()= validates settings without starting a runtime. Blocking =run()=
+starts NNG, enters HPX, runs the business loop and both cleanup hooks inside
+HPX, then releases NNG after HPX returns. A server/runtime owner is noncopyable,
+nonmovable, and supports one run attempt; it is not a restartable or concurrent
+host interface. The first business/cleanup error is preserved.
+
+Application business concurrency belongs to HPX. Do not create application OS
+threads, private executors, or blocking business loops. NNG callbacks may
+validate/copy/decode and hand work to HPX; they must not execute business logic.
+When communication clients are added, stop their producers in =stop()= and
+drain/cancel callbacks and tasks in =wait_stop()= before finalization. Neither
+hook currently owns clients. See [[file:../../BUILD.org][BUILD.org]] for exact configuration and
+signal behavior. Vault/key loading is outside the implemented runtime scope.
+
 ** Documentation and verification
 
 Use Org files, =#+begin_src= / =#+end_src= blocks, inline =code=, and relative
@@ -67,9 +90,10 @@ changed and newly untracked pages for links, headings, paired blocks, whitespace
 and bilingual consistency. Use CLI help, =list=, =metadata=, and dry-run plans
 to check command descriptions without building or launching programs.
 
-=check= includes compilation. =test= prepares/builds and runs CTest, but the
-current scaffold has no actual test suite. Do not report either a dry-run or
-an empty test inventory as passing correctness tests. Do not run full builds
+=check= includes compilation. =test= builds the application and lifecycle
+probe and runs the five registered runtime process tests. These tests do not
+exercise Vault, remote APIs, or in-flight communication callbacks. Do not report
+a dry-run or an empty test inventory as passing correctness tests. Do not run full builds
 unless explicitly requested; do not run installation, deployment, or services
 as incidental documentation checks. Report performed checks and unrun checks.
 No automatic commit is part of documentation maintenance.

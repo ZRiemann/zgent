@@ -23,7 +23,7 @@ adds the sibling =zeta_forge/common= directory to the analysis path. If
 extra paths for that workspace as well. This setting only affects editor
 analysis; =zbuild.py= locates Forge at runtime using =ZETAX_ROOT=.
 
-Prepare the shared dependency packages and install the zpp core package
+Prepare the shared dependency packages and install the zpp core, NNG, and HPX packages
 for the intended profile before configuring zgent:
 
 #+begin_src sh
@@ -31,7 +31,7 @@ cd "$ZETAX_ROOT/zeta_forge"
 ./zbuild.py install deps --profile release
 
 cd "$ZETAX_ROOT/zpp"
-./zbuild.py install zpp --profile release
+./zbuild.py install zpp zpp_nng zpp_hpx --profile release
 
 cd "$ZETAX_ROOT/zgent"
 ./zbuild.py doctor --profile release
@@ -41,8 +41,10 @@ For Debug, replace =release= with =debug= in each command. These setup
 operations build/install dependencies; they are separate from a documentation
 check. Reinstall zpp and rebuild affected consumers after relevant zpp changes.
 
-zgent uses =find_package(zpp CONFIG REQUIRED)= and links =zpp::zpp=. It
-consumes Forge's installed dependency package configuration rather than
+zgent uses the =zpp=, =zpp_nng=, and =zpp_hpx= CMake packages and links
+=zpp::zpp_nng= and =zpp::hpx=, which also supply the core =zpp::zpp= dependency.
+The HPX package checks its Forge-managed source identity and required features.
+zgent consumes Forge's installed dependency package configuration rather than
 maintaining a separate Conan graph. The installation prefix comes from
 =ZETA_INSTALL_PREFIX=, defaulting to =~/.local=.
 
@@ -75,11 +77,21 @@ Run commands from the zgent checkout:
   profile's build tree and then builds it again.
 - =check= configures and compiles the selected native target. It does not
   rewrite source or run tests, but it is not a documentation-only check.
-- =test= enables the test configuration, builds, and invokes CTest with
-  =--no-tests=error=. No tests are implemented or registered in the current
-  scaffold, so this is not an available passing correctness suite.
+- =test= enables the test configuration, builds =zgent= and the internal
+  =zgent_lifecycle_probe=, and invokes CTest with =--no-tests=error=. Five
+  process tests cover SIGINT, SIGTERM, configuration validation, HPX startup
+  failures, and lifecycle exceptions/error precedence. They need Python 3,
+  use temporary configuration/logs, and require no Vault, keys, or remote APIs.
 - =run= launches an existing executable without building. =dev= builds once
   and launches it in the foreground; it is not a watcher.
+- The project explicitly registers =zgent= with Forge. Native =add_run_target()=
+  generates executable/default arguments/cwd metadata; no source scan is used.
+  Existing configured trees need a one-time =cmake -S . -B build/Release= after
+  updating Forge (or the corresponding Debug tree). This configures only and
+  preserves cached options. Missing metadata fails instead of guessing paths.
+- Foreground execution and Ctrl-C process-group cleanup use the shared Forge
+  RunSpec owner. The project hook still prepares the log directory and supplies
+  its environment; no separate Python server-launch implementation remains.
 - =clean= removes only =build/Release= or =build/Debug= for the selected
   profile, including its sibling native outputs. It preserves the other
   profile, installations, logs, source, and shared caches.
@@ -99,35 +111,78 @@ The launcher runs from =build/<BuildType>/src/zgent/=, using the executable
 in that directory and these arguments:
 
 #+begin_src text
-<absolute executable path> <absolute checkout path>/doc/server.json zgent
+<absolute executable path> <absolute checkout path>/doc/zgent_conf.json zgent --hpx:config=<absolute checkout path>/doc/zgent_hpx.ini
 #+end_src
 
 The first program argument selects the JSON file and the second selects its
-=zgent= configuration item. Arguments supplied after =--= are appended to
-these defaults, not substituted for them. The current application defines
-no additional argument parser.
+=zgent= configuration item. The HPX option loads the business runtime INI.
+Arguments supplied after =--= are appended to these defaults, not substituted
+for them; HPX parses its own options. Avoid repeating the single-valued
+=--hpx:config= option; use direct invocation to select another INI file.
+An explicitly selected unreadable INI file is an error. Without an INI option,
+direct invocation uses HPX defaults.
 
 * Lifecycle and logging
 
-The project entry in =src/zgent/main.cpp= constructs the application and calls
-=configure -> run -> loop -> stop -> wait_stop= on the successful path.
-The application currently overrides only =run= and =stop= to log messages.
+The project entry constructs =z::app::server : z::server= and calls
+=configure()= followed by blocking =run()=. Both are called once from the
+native main thread. The application owns NNG and a small local =hpx_runtime=
+object; it does not derive from =z::hpx::server= or generate entrypoints with
+=SVR_NAME=. The successful lifecycle is:
 
-In the inspected zpp source, the default =timer()= returns =ERR_END= and
-=loop()= exits on that result. zgent does not override =timer()=, so that
-source implies an immediate loop exit rather than a persistent service.
-This is a source-based finding, not a runtime test of the installed zpp
-package or the existing zgent executable. The launcher supports Ctrl-C
-for a process that is still running; this does not establish a persistent
-loop in the current scaffold.
+#+begin_example
+configure -> initialize NNG -> start HPX
+  HPX task: business startup -> loop -> stop -> wait_stop -> finalize
+HPX returns -> release NNG -> return run result
+#+end_example
 
-[[file:doc/server.json][Development configuration]] enables asynchronous console and rotating-file
+The loop uses a 100 ms HPX suspension and remains active until SIGINT,
+SIGTERM, or a business loop exit. The HPX wrapper forces =hpx.handle_signals=0=
+to preserve the shared server's signal handling; HPX's own SIGINT handler
+would abort. The ready log reports the actual HPX worker count. The supplied
+[[file:doc/zgent_hpx.ini][HPX configuration]] selects three workers and idle backoff settings.
+
+=stop()= and =wait_stop()= execute on the HPX lifecycle task, including after
+business exceptions. Cleanup continues after an earlier cleanup error, and
+the first error is returned. Startup failure releases an initialized NNG
+owner even when the HPX callback never executes. The existing zpp NNG wrapper
+still exits the process if NNG initialization itself fails.
+
+Business tasks, timers, and continuations belong to HPX. Future NNG callbacks
+must limit themselves to boundary handling and transfer business work to HPX.
+When adding real clients, =stop()= must quiesce communication producers and
+=wait_stop()= must drain/cancel outstanding work before HPX finalization.
+These hooks currently log and delegate to the base; no client or request is
+implemented, so there are no in-flight requests to drain yet.
+
+[[file:doc/zgent_conf.json][Development configuration]] enables asynchronous console and rotating-file
 logging. The file is =${ZETAX_ROOT}/logs/zgent/zgent.log=; =run= and =dev=
 create its parent directory before launch. Current settings include a 32 MiB
 file-size limit, =rotats= set to 3, a queue size of 8192, and a two-second
 flush interval. Direct executable invocation must prepare the log directory
 and the environment itself. Keep credentials and private data out of
 committed configuration and log messages.
+
+The selected JSON service's optional =nng_runtime= object maps these settings
+to the corresponding =nng_init_params= fields:
+
+| JSON key | NNG field |
+|----------+-----------|
+| =task_threads= | =num_task_threads= |
+| =task_threads_max= | =max_task_threads= |
+| =expire_threads= | =num_expire_threads= |
+| =expire_threads_max= | =max_expire_threads= |
+| =poller_threads= | =num_poller_threads= |
+| =poller_threads_max= | =max_poller_threads= |
+| =resolver_threads= | =num_resolver_threads= |
+
+Missing settings use zero, meaning NNG's library defaults. Values must be
+integers in =[0, 32767]=; only the three =*_max= settings also accept =-1=
+for unlimited. NNG applies its own effective limits (including at least two
+task threads) and platform rules. The initialization log reports supplied
+parameters, not measured thread counts. =aios= has been removed because the
+current NNG initialization API has no such setting. =deepinfra_id= remains a
+secret identifier only; zgent does not read it or request a key yet.
 
 * Vault operations
 

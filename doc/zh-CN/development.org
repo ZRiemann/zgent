@@ -21,12 +21,13 @@ Agent 默认围绕用户已有代码和明确方向，完善辅助代码、文�
 ** 源码阅读路径
 
 1. 阅读 [[file:../../readme.org][项目主页]] 和 [[file:../../AGENTS.md][Agent 指导]]，了解意图与约束。
-2. 阅读 [[file:../../src/zgent/main.cpp][main.cpp]]：创建 =z::app::server= 并驱动其生命周期。
+2. 阅读 [[file:../../src/zgent/main.cpp][main.cpp]]：创建 =z::app::server=，调用 =configure()= 与阻塞式 =run()=。
 3. 阅读 [[file:../../src/zgent/app.h][app.h]] 与 [[file:../../src/zgent/app.cpp][app.cpp]]：项目自身的应用类和行为。
 4. 在 zpp 仓库查看 =include/zpp/core/server.h= 和 =src/zpp/core/server.cpp=，
    了解服务器生命周期。zgent 使用已安装的 zpp 包，
    查看源码不代表已有二进制一定采用同一版本。
-5. 结合 [[file:../../BUILD.org][BUILD.org]] 阅读 [[file:../server.json][server.json]]、[[file:../../src/zgent/CMakeLists.txt][原生构建目标]] 和
+5. 阅读 [[file:../../src/zgent/hpx_runtime.h][hpx_runtime.h]] 及其实现，了解应用内部的 HPX 边界。
+6. 结合 [[file:../../BUILD.org][BUILD.org]] 阅读 [[file:../zgent_conf.json][zgent_conf.json]]、[[file:../zgent_hpx.ini][zgent_hpx.ini]]、[[file:../../src/zgent/CMakeLists.txt][原生构建目标]] 和
    [[file:../../builder/zgent.py][项目构建定义]]，理解配置与构建行为。
 
 ** ZetaX 职责与复用
@@ -43,6 +44,24 @@ zgent 完整遵守 ZetaX 项目约定与约束：
 跨越授权仓库范围前先说明建议的职责归属。保留无关修改、暂存范围、运行配置和
 显式代理设置。未经明确要求，不修改第三方目录或生成文件。
 
+** 运行时所有权
+
+=z::app::server= 保留 =z::server= 基类，组合持有两个运行时成员。NNG 使用
+已安装的 zpp 封装。已有 zpp server/main 适配器没有可组合持有的运行时对象，
+因此应用内部的薄封装 =hpx_runtime= 负责回调式 HPX 初始化与结束；本次选择
+仅服务于 zgent，不增加 zpp 公共接口。
+
+=configure()= 校验配置，不启动运行时。阻塞式 =run()= 先启动 NNG，再进入 HPX，
+在 HPX 内执行业务循环和两个清理钩子；HPX 返回后释放 NNG。服务器和运行时对象
+不可复制、不可移动，只允许尝试运行一次，不提供重启或并发宿主接口。
+保留最先出现的业务/清理错误。
+
+应用业务并发统一交给 HPX，不创建应用 OS 线程、私有执行器或阻塞业务循环。
+NNG 回调仅校验、复制、解码并将任务交给 HPX，不执行业务逻辑。未来增加通信客户端时，
+在 =stop()= 中停止生产者，在 =wait_stop()= 中收敛或取消回调及任务，再结束 HPX。
+目前两个钩子尚未持有客户端。配置与信号行为见 [[file:../../BUILD.org][BUILD.org]]。
+Vault/密钥加载不属于已实现的运行时范围。
+
 ** 文档与验证
 
 文档使用 Org 文件、=#+begin_src= / =#+end_src= 代码块、行内 =code= 和相对
@@ -53,7 +72,8 @@ zgent 完整遵守 ZetaX 项目约定与约束：
 标题、代码块配对、空白和双语一致性。使用 CLI 帮助、=list=、=metadata= 和
 dry-run 核对命令描述，不因此触发构建或启动程序。
 
-=check= 包含编译。=test= 会准备、构建并运行 CTest，但当前骨架没有实际测试套件。
-不能将 dry-run 成功或空测试清单报告为正确性测试通过。未经明确要求不运行完整
+=check= 包含编译。=test= 构建应用和生命周期探针，并运行五项已注册的运行时进程测试。
+这些测试不覆盖 Vault、远程 API 或在途通信回调。不能将 dry-run 成功或空测试清单
+报告为正确性测试通过。未经明确要求不运行完整
 构建，不把安装、部署或服务启动作为文档检查的附带操作。交付时报告已做与未做
 的验证。文档维护不自动包含 Git 提交。

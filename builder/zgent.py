@@ -1,21 +1,13 @@
 from __future__ import annotations
 
-import os
-import signal
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
 
-from zeta_forge.build_cli import Product, Project, Request, log
+from zeta_forge.build_cli import Product, Project, Request
 from zeta_forge.cmake_builder import CMakeProjectBuilder, CommonBuildArgs, cmake_bool
 from zeta_forge.cmake_engine import CMAKE_ACTIONS, CMakeEngine
+from zeta_forge.cmake_run import CMakeRunTarget
 from zeta_forge.config import load_repo_config
-from zeta_forge.run_targets import RunTarget, discover_run_targets, find_run_target
-
-
-class ServerInterrupted(KeyboardInterrupt):
-    """The server session ended because the operator stopped it."""
 
 
 @dataclass(frozen=True)
@@ -106,39 +98,6 @@ class ZgentBuilder(CMakeProjectBuilder):
         ]
 
 
-def _serve(target: RunTarget, arguments: Sequence[str], environment: dict[str, str]) -> None:
-    """Run the server in the foreground, keeping its console output and group."""
-    executable = target.executable_path
-    if not executable.is_file():
-        raise RuntimeError(f"built executable is missing: {executable}")
-    command = [str(executable), *target.resolved_args, *arguments]
-    log("I", f"launch {executable.name}; stop it with Ctrl-C")
-    process = subprocess.Popen(
-        command, cwd=target.working_dir, env=environment, start_new_session=True
-    )
-    try:
-        status = process.wait()
-    except KeyboardInterrupt:
-        _stop_process_group(process)
-        raise ServerInterrupted from None
-    if status != 0:
-        raise RuntimeError(f"{executable.name} exited with status {status}")
-
-
-def _stop_process_group(process: subprocess.Popen) -> None:
-    """Escalate within the launcher's own process group until it is reaped."""
-    for sig, timeout in ((signal.SIGINT, 10), (signal.SIGTERM, 3), (signal.SIGKILL, 3)):
-        try:
-            os.killpg(process.pid, sig)
-        except ProcessLookupError:
-            return
-        try:
-            process.wait(timeout=timeout)
-            return
-        except subprocess.TimeoutExpired:
-            continue
-
-
 def project(script_path: Path) -> Project:
     root = script_path.resolve().parent
     config = load_repo_config(script_path, project_source_defaults={"ZETA_GENT_SRC_DIR": root})
@@ -157,24 +116,13 @@ def project(script_path: Path) -> Project:
         log_root.mkdir(parents=True, exist_ok=True)
         return environment
 
-    class ZgentEngine(CMakeEngine):
-        def execute(self, request: Request, names: tuple[str, ...]) -> None:
-            if request.action in {"run", "dev"}:
-                builder = self.factory(request, names)
-                if request.action == "dev":
-                    builder.build(self.native_targets(names), jobs=request.jobs)
-                target = find_run_target(
-                    discover_run_targets(builder.source_dir, builder.build_dir), names[0]
-                )
-                _serve(target, request.arguments, run_environment(names[0], builder.source_dir))
-                return
-            super().execute(request, names)
-
-    engine = ZgentEngine(
+    engine = CMakeEngine(
         root,
         factory,
         ("zgent",),
-        test_targets=lambda _: (),
+        test_targets=lambda _: ("zgent", "zgent_lifecycle_probe"),
+        run_environment=run_environment,
+        run_targets={"zgent": CMakeRunTarget("zgent")},
     )
     products = (
         Product("zgent", "cmake", "zgent application server", (*CMAKE_ACTIONS, "run", "dev")),

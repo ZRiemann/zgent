@@ -23,13 +23,15 @@ delivery direction remain user-led.
 
 ** Current state
 
-The implementation is a minimal C++ application server scaffold built on
-=zpp=. It contains a project-owned main entry, a =z::server= subclass, startup and
-shutdown log messages, JSON logging configuration, and a Forge-backed build
-entry. Agent-specific runtime behavior has not been implemented.
+The C++ application runtime is built on =zpp=. A =z::server= subclass owns
+=z::nng::nng= for external communication and a small application-local HPX
+runtime owner for business work. The project main calls =configure()= and
+blocking =run()=; the service remains active until shutdown. Agent-specific
+business logic and Vault/API key requests have not been implemented.
 
-There are no test cases or registered CTest tests yet. Existing build
-artifacts alone do not establish current build or runtime acceptance.
+Focused CTest process tests cover configuration, signals, startup failures,
+and cleanup errors. Existing build artifacts alone do not establish current
+build or runtime acceptance.
 The current version is recorded in [[file:VERSION][VERSION]].
 See [[file:release_history.org][Release history]] and [[file:doc/zh-CN/release_history.org][中文发布历史]] for changes and
 verification limits.
@@ -46,18 +48,18 @@ as described in [[file:BUILD.org::*Prerequisites][Build prerequisites]], then ru
 ./zbuild.py run --profile release
 #+end_src
 
-=run= uses an existing executable; =dev= builds and runs once. The current
-scaffold does not implement a persistent service loop. See
-[[file:BUILD.org][BUILD.org]] for the source-based lifecycle finding, runtime verification
-limits, command semantics, paths, and cleanup scope.
+=run= uses an existing executable; =dev= builds and runs once. Stop the
+foreground service with Ctrl-C. See [[file:BUILD.org][BUILD.org]] for lifecycle ordering,
+verification scope, command semantics, paths, and cleanup scope.
 
 ** Repository layout
 
 - =src/zgent/= : application entry and server subclass; =zgent_core= and =zgent= targets.
 - =include/= : currently empty; reserved for interfaces when needed.
-- =tests/= : currently empty; no correctness suite is implemented.
+- =tests/= : isolated runtime process tests and a lifecycle failure probe.
 - =builder/= and =zbuild.py= : project build definition and thin Forge entry.
-- =doc/server.json= : development logging configuration.
+- =doc/zgent_conf.json= : development logging and NNG runtime configuration.
+- =doc/zgent_hpx.ini= : HPX business runtime configuration.
 - =doc/en/= and =doc/zh-CN/= : English primary and Simplified Chinese documentation.
 - =BUILD.org= : shared build and runtime reference for both languages.
 - =release_history.org= : English release history, with a Chinese translation under =doc/zh-CN/=.

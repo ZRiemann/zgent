@@ -13,6 +13,19 @@ This record does not declare runtime acceptance or deployment.
 
 * Release History
 
+** v0.3.0 - 2026-11-10T01:51:44Z
+:PROPERTIES:
+:CUSTOM_ID: v0.3.0
+:END:
+
+*** Changes
+- Compose NNG initialization and an application-owned HPX runtime around a persistent server lifecycle, with configuration validation and ordered cleanup.
+- Use Forge run-target metadata and shared foreground process handling; document dependencies, runtime configuration, and shutdown behavior.
+- Add process tests for signals, configuration, startup failures, and lifecycle cleanup.
+
+*** Validation
+- No tests, builds, runtime acceptance, or deployment were performed during this commit workflow.
+
 ** v0.2.0 - 2026-10-30T02:16:26Z
 :PROPERTIES:
 :CUSTOM_ID: v0.2.0

@@ -1,5 +1,6 @@
 add_library(zgent_core STATIC
     app.cpp
+    hpx_runtime.cpp
 )
 
 target_include_directories(zgent_core PUBLIC
@@ -7,7 +8,8 @@ target_include_directories(zgent_core PUBLIC
 )
 
 target_link_libraries(zgent_core PUBLIC
-    zpp::zpp
+    zpp::zpp_nng
+    zpp::hpx
 )
 
 if(TARGET cxx_options)
@@ -28,5 +30,6 @@ endif()
 
 if(COMMAND add_run_target)
     add_run_target(zgent ARGS
-        ${PROJECT_SOURCE_DIR}/doc/server.json zgent)
+        ${PROJECT_SOURCE_DIR}/doc/zgent_conf.json zgent
+        --hpx:config=${PROJECT_SOURCE_DIR}/doc/zgent_hpx.ini)
 endif()

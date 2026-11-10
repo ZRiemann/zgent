@@ -18,8 +18,7 @@
             "expire_threads_max": 2,
             "poller_threads": 2,
             "poller_threads_max": 2,
-            "resolver_threads": 1,
-            "aios": 1024
+            "resolver_threads": 1
         },
         "deepinfra_id": "dpinf_key"
     }

@@ -15,14 +15,16 @@ zeta_agent 主要由 Agent 开发维护，用户审查需要投入较多时间�
 
 * 当前实现
 
-- C++ 应用服务器骨架，包含 =zgent= 和内部 =zgent_core= 构建目标。
-- 继承 =z::server=，使用项目自身的 main 入口。
-- 启动、停止日志，以及 JSON 控制台和滚动文件日志配置。
+- C++ 应用运行时，包含 =zgent= 和内部 =zgent_core= 构建目标。
+- 继承 =z::server=，组合持有 =z::nng::nng= 和应用内部的 HPX 运行时对象。
+- =run()= 前台阻塞，使用 HPX 协作式常驻循环并响应信号退出。
+- JSON 日志/NNG 配置，以及默认三个业务工作线程的 HPX INI 配置。
 - 薄入口 =zbuild.py= 和基于 Forge 的项目构建定义。
-- 尚未实现 Agent 业务运行时、测试用例或注册的 CTest 测试。
+- 五项 CTest 进程测试，覆盖配置、信号、启动失败和清理错误/异常。
+- 尚未实现 Agent 业务逻辑或 Vault/API key 请求。
 
-按已查看的 zpp 源码，继承的循环会立即结束；尚未通过运行已安装包或现有
-可执行程序确认。完整依据与限制见 [[file:../../BUILD.org::*Lifecycle and logging][生命周期与日志说明]]。
+NNG 负责通信执行，HPX 负责应用业务任务。应用先停止并收敛工作，再结束 HPX，
+最后释放 NNG。所有权、配置和错误语义见 [[file:../../BUILD.org::*Lifecycle and logging][生命周期与日志说明]]。
 版本记录在 [[file:../../VERSION][VERSION]]；版本号或已有产物不代表功能完整或通过当前验证。
 
 * 文档导航
@@ -31,7 +33,7 @@ zeta_agent 主要由 Agent 开发维护，用户审查需要投入较多时间�
 - [[file:../../BUILD.org][构建与运行参考]]：依赖准备、配置、命令、路径和限制。
 - [[file:development.org][开发指南]]：协作方式、源码阅读、职责归属和验证规则。
 - [[file:../../AGENTS.md][Agent 指导]]：ZetaX 约定及本项目的工作约束。
-- [[file:../server.json][开发配置]]。
+- [[file:../zgent_conf.json][开发配置]] 和 [[file:../zgent_hpx.ini][HPX 配置]]。
 
 英文是主文档，行为或项目指导变化时同步维护简体中文页面。两种语言统一引用
 根目录 =BUILD.org= 作为构建说明。许可证见 [[file:../../LICENSE][LICENSE]]。

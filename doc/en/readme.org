@@ -18,15 +18,18 @@ Referencing zeta_agent does not adopt its architecture, features, or milestones.
 
 * Current implementation
 
-- A C++ application server scaffold with =zgent= and internal =zgent_core= targets.
-- A =z::server= subclass driven by the project-owned main entry.
-- Startup/shutdown messages and JSON console/rotating-file logging configuration.
+- A C++ application runtime with =zgent= and internal =zgent_core= targets.
+- A =z::server= subclass composing =z::nng::nng= and a local HPX runtime owner.
+- A foreground, blocking =run()= with an HPX cooperative loop and signal shutdown.
+- JSON logging/NNG configuration and an HPX INI with three business workers.
 - A thin =zbuild.py= and project-owned build definition using Forge.
-- No implemented agent-specific runtime behavior, test cases, or registered CTest tests.
+- Five CTest process tests covering configuration, signals, startup failures,
+  and cleanup errors/exceptions.
+- No implemented agent business logic or Vault/API key requests.
 
-The inspected zpp source implies that the inherited loop exits immediately;
-this has not been checked by running the installed package or existing
-executable. See [[file:../../BUILD.org::*Lifecycle and logging][Lifecycle and logging]] for the exact qualification.
+NNG owns communication execution; HPX owns application business tasks.
+The application stops/drains work before finalizing HPX, then releases NNG.
+See [[file:../../BUILD.org::*Lifecycle and logging][Lifecycle and logging]] for ownership, configuration, and error semantics.
 The version is recorded in [[file:../../VERSION][VERSION]]; a version number or existing
 artifact is not a statement of feature completeness or current verification.
 
@@ -36,7 +39,7 @@ artifact is not a statement of feature completeness or current verification.
 - [[file:../../BUILD.org][Build and runtime reference]]: dependency setup, profiles, commands, paths, and limits.
 - [[file:development.org][Development guide]]: collaboration, source reading, ownership, and verification.
 - [[file:../../AGENTS.md][Agent guidance]]: ZetaX rules and project-specific working constraints.
-- [[file:../server.json][Development configuration]].
+- [[file:../zgent_conf.json][Development configuration]] and [[file:../zgent_hpx.ini][HPX configuration]].
 
 English is the primary documentation language; keep the Simplified Chinese
 pages synchronized when behavior or project guidance changes. Both languages
